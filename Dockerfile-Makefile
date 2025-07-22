@@ -1,0 +1,123 @@
+# Makefile
+SHELL := /bin/bash
+.PHONY: default
+default: run
+REDIS_PLUS_PLUS_MODULES_DIR=./redis-plus-plus-modules
+BOOST_1_81_0_DIR=/workspace/backend-cpp/boost_1_81_0/
+INCLUDE_DIR=./include
+INCLUDE_SERVICES_DIR=./include/services
+INCLUDE_CONTROLLERS_DIR=./include/controllers
+INCLUDE_ROUTER_DIR=./include/router
+# CPP_JWT_INCLUDE_DIR=/workspace/backend-cpp/cpp-jwt/include/
+SRC_FILES := $(shell find ./src/*.cpp -name '*.cpp')
+WEB_SOURCES := $(shell find ./src/web/ -name '*.cpp')
+SERVICES_SOURCES := $(shell find ./src/services/ -name '*.cpp')
+ROUTER_SOURCES := $(shell find ./src/router/ -name '*.cpp')
+CONTROLLER_SOURCES := $(shell find ./src/controllers/ -name '*.cpp')
+ENV_VAR_FILE=.env
+include $(ENV_VAR_FILE)
+export $(shell sed 's/=.*//' $(ENV_VAR_FILE))
+
+cd-backend-cpp-dir:
+	cd ${BACKEND-CPP-DIR}
+
+build-docker-image:
+	docker build -f Dockerfile-webserver --tag public.ecr.aws/b8h3z2a1/sravz/backend-cpp:$(BACKEND_CPP_IMAGE_Version) .
+
+all: sravz
+
+util: ./include/util.hpp
+	g++ --std=c++17 -I$(REDIS_PLUS_PLUS_MODULES_DIR) -I$(BOOST_1_81_0_DIR) -I$(INCLUDE_DIR) -I$(CPP_JWT_INCLUDE_DIR) -I$(REDIS_PLUS_PLUS_MODULES_DIR)/include -L$(BOOST_1_81_0_DIR)/stage/lib -L$(REDIS_PLUS_PLUS_MODULES_DIR)/lib ./include/util.hpp -lhiredis -lhiredis_ssl -lredis++ -lpthread -lboost_thread -lboost_program_options -lcrypto -lssl -lboost_json -lboost_url -lboost_log
+
+sravz: $(INCLUDE_DIR) $(WEB_INCLUDES) $(INCLUDE_SERVICES_DIR) $(SRC_FILES) $(WEB_SOURCES) $(SERVICES_SOURCES) $(ROUTER_SOURCES) \
+$(CONTROLLER_SOURCES) ./src/util.cpp ./include/util.hpp
+	/usr/lib/ccache/g++ -pipe --std=c++17 -Wno-deprecated-declarations -DBOOST_LOG_DYN_LINK \
+	-I$(REDIS_PLUS_PLUS_MODULES_DIR) \
+	-I$(INCLUDE_DIR) \
+	-I$(INCLUDE_SERVICES_DIR) \
+	-I$(INCLUDE_CONTROLLERS_DIR) \
+	-I$(INCLUDE_ROUTER_DIR) \
+	-I/usr/local/include/mongocxx/v_noabi \
+	-I/usr/local/include/bsoncxx/v_noabi \
+	-I/usr/local/include/aws/include \
+	-L/usr/local/lib/ \
+	-o ./dist/backend-cpp \
+	$(SRC_FILES) $(WEB_SOURCES) $(SERVICES_SOURCES) $(ROUTER_SOURCES) $(CONTROLLER_SOURCES) \
+	-lhiredis -lhiredis_ssl -lhiredis_ssl -lredis++ -lpthread -lboost_thread -lboost_program_options \
+	-lcrypto -lssl -lboost_json -lboost_url -lboost_log -lmongocxx -lbsoncxx \
+	-lboost_filesystem -lboost_system -lboost_date_time -lboost_regex \
+	-lboost_log_setup -laws-cpp-sdk-core -laws-cpp-sdk-s3
+
+sravz_boost: ./src/main_boost.cpp
+	g++ --std=c++17 -I$(REDIS_PLUS_PLUS_MODULES_DIR) -I$(BOOST_1_81_0_DIR) -I$(REDIS_PLUS_PLUS_MODULES_DIR)/include -L$(BOOST_1_81_0_DIR)/stage/lib -L$(REDIS_PLUS_PLUS_MODULES_DIR)/lib -o ./dist/$@ $< -lhiredis -lhiredis_ssl -lredis++ -lpthread -lboost_thread
+
+sravz_threaded: ./src/main_threaded.cpp
+	g++ --std=c++17 -I$(REDIS_PLUS_PLUS_MODULES_DIR) -I$(BOOST_1_81_0_DIR) -I$(INCLUDE_DIR) -I$(REDIS_PLUS_PLUS_MODULES_DIR)/include -L$(BOOST_1_81_0_DIR)/stage/lib -L$(REDIS_PLUS_PLUS_MODULES_DIR)/lib -o ./dist/$@ $< -lhiredis -lhiredis_ssl -lredis++ -lpthread -lboost_thread
+
+sravz_ws: ./src/main_ws.cpp
+	g++ --std=c++17 -I$(REDIS_PLUS_PLUS_MODULES_DIR) -I$(BOOST_1_81_0_DIR) -I$(INCLUDE_DIR) -I$(REDIS_PLUS_PLUS_MODULES_DIR)/include -L$(BOOST_1_81_0_DIR)/stage/lib -L$(REDIS_PLUS_PLUS_MODULES_DIR)/lib -o ./dist/$@ $< -lhiredis -lhiredis_ssl -lredis++ -lpthread -lboost_thread -lcrypto -lssl
+
+sravz_ws_async: ./src/ws_vendor.cpp ./src/util.cpp ./include/util.hpp ## Runs websocket client
+	g++ --std=c++17 -I$(REDIS_PLUS_PLUS_MODULES_DIR) -I$(BOOST_1_81_0_DIR) -I$(INCLUDE_DIR) -I$(REDIS_PLUS_PLUS_MODULES_DIR)/include -L$(BOOST_1_81_0_DIR)/stage/lib -L$(REDIS_PLUS_PLUS_MODULES_DIR)/lib -o ./dist/sravz_ws_async ./src/ws_vendor.cpp ./src/util.cpp -lhiredis -lhiredis_ssl -lredis++ -lpthread -lboost_thread -lcrypto -lssl -lboost_json
+
+sravz_redis_async: ./test/main_redis_async.cpp ./src/redis_subscriber.cpp ./src/util.cpp ./include/redis_subscriber.hpp ./include/util.hpp
+	g++ --std=c++17 -I$(REDIS_PLUS_PLUS_MODULES_DIR) -I$(BOOST_1_81_0_DIR) -I$(INCLUDE_DIR) -I$(REDIS_PLUS_PLUS_MODULES_DIR)/include -L$(BOOST_1_81_0_DIR)/stage/lib -L$(REDIS_PLUS_PLUS_MODULES_DIR)/lib -o ./dist/sravz_redis_async ./test/main_redis_async.cpp ./src/redis_subscriber.cpp ./src/util.cpp -lhiredis -lhiredis_ssl -lredis++ -lpthread -lboost_thread -lcrypto -lssl -lboost_coroutine -lboost_context -lboost_json
+
+sravz_web_server: $(WEB_SOURCES) $(WEB_INCLUDES) $(SERVICES_SOURCES) $(ROUTER_SOURCES) $(CONTROLLER_SOURCES) ./src/util.cpp ./include/util.hpp
+	g++ --std=c++17 -Wno-deprecated-declarations -I$(REDIS_PLUS_PLUS_MODULES_DIR) -I$(BOOST_1_81_0_DIR) -I$(INCLUDE_DIR) -I$(CPP_JWT_INCLUDE_DIR) -I$(REDIS_PLUS_PLUS_MODULES_DIR)/include -I$(INCLUDE_SERVICES_DIR) -I$(INCLUDE_CONTROLLERS_DIR) -I$(INCLUDE_ROUTER_DIR) -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -L$(BOOST_1_81_0_DIR)/stage/lib -L$(REDIS_PLUS_PLUS_MODULES_DIR)/lib  -L/usr/local/lib -o ./dist/sravz_web_server $(WEB_SOURCES) $(SERVICES_SOURCES) $(ROUTER_SOURCES) $(CONTROLLER_SOURCES) ./src/util.cpp -lhiredis -lhiredis_ssl -lredis++ -lpthread -lboost_thread -lcrypto -lssl -lboost_coroutine -lboost_context -lboost_json -lboost_url -lmongocxx -lbsoncxx
+
+sravz_actor: ./src/actor.cpp
+	g++ --std=c++17 -I$(REDIS_PLUS_PLUS_MODULES_DIR) -I$(BOOST_1_81_0_DIR) -I$(INCLUDE_DIR) -I$(CPP_JWT_INCLUDE_DIR) -I$(REDIS_PLUS_PLUS_MODULES_DIR)/include -L$(BOOST_1_81_0_DIR)/stage/lib -L$(REDIS_PLUS_PLUS_MODULES_DIR)/lib -o ./dist/actor ./src/actor.cpp -lhiredis -lhiredis_ssl -lredis++ -lpthread -lboost_thread -lcrypto -lssl -lboost_coroutine -lboost_context -lboost_json -lboost_url
+
+sravz_service_db: ./src/services/mongo_db.cpp
+	#c++ --std=c++11  ./src/services/mongo_db.cpp -o ./dist/mongo_db $(pkg-config --cflags --libs libmongocxx)
+	g++ --std=c++17 -I/usr/local/include/mongocxx/v_noabi -I/usr/local/include/bsoncxx/v_noabi -L/usr/local/lib ./src/services/mongo_db.cpp -o ./dist/mongo_db -lmongocxx -lbsoncxx
+
+clean:
+	rm -f ./dist/sravz
+
+#### Targets are run in the Dockerfile
+# Local
+run_webserver_local:
+	LD_LIBRARY_PATH=/usr/local/lib ./dist/backend-cpp -s webserver -c app.cfg
+
+# Used in Dockerfile
+run_webserver:
+	LD_LIBRARY_PATH=/usr/local/lib ./dist/backend-cpp -s webserver -c app.prod.cfg
+
+# Used in Dockerfile
+run_websocket_reader_local:
+	LD_LIBRARY_PATH=/usr/local/lib ./dist/backend-cpp -s ws-vendor -c app.cfg
+
+#### Below targets are for testing
+run: sravz
+	# ps -ef | grep "./dist/backend-cpp -s webserver" | awk '{print $2}' | xargs kill -9 $1
+	LD_LIBRARY_PATH=/usr/local/lib ./dist/backend-cpp -s webserver
+
+run_only:
+	LD_LIBRARY_PATH=$(REDIS_PLUS_PLUS_MODULES_DIR)/lib:$(BOOST_1_81_0_DIR)/stage/lib ./dist/sravz
+
+run_sravz_boost: #sravz_boost
+	LD_LIBRARY_PATH=$(REDIS_PLUS_PLUS_MODULES_DIR)/lib:$(BOOST_1_81_0_DIR)/stage/lib ./dist/sravz_boost
+
+run_sravz_threaded: sravz_threaded
+	LD_LIBRARY_PATH=$(REDIS_PLUS_PLUS_MODULES_DIR)/lib:$(BOOST_1_81_0_DIR)/stage/lib ./dist/sravz_threaded
+
+run_sravz_ws: sravz_ws
+	LD_LIBRARY_PATH=$(REDIS_PLUS_PLUS_MODULES_DIR)/lib:$(BOOST_1_81_0_DIR)/stage/lib ./dist/sravz_ws ws.eodhistoricaldata.com 443 "{\"action\": \"subscribe\", \"symbols\": \"ETH-USD\"}"
+
+run_sravz_ws_async: sravz_ws_async
+	LD_LIBRARY_PATH=$(REDIS_PLUS_PLUS_MODULES_DIR)/lib:$(BOOST_1_81_0_DIR)/stage/lib ./dist/sravz_ws_async ws.eodhistoricaldata.com 443 "{\"action\": \"subscribe\", \"symbols\": \"ETH-USD, BTC-USD\"}" "/ws/crypto?api_token=demo" 3
+
+run_sravz_web_server: sravz_web_server
+	LD_LIBRARY_PATH=$(REDIS_PLUS_PLUS_MODULES_DIR)/lib:$(BOOST_1_81_0_DIR)/stage/lib ./dist/sravz_web_server 0.0.0.0 8080 . 5 "ETH-USD,BTC-USD"
+
+run_sravz_redis_async: sravz_redis_async
+	LD_LIBRARY_PATH=$(REDIS_PLUS_PLUS_MODULES_DIR)/lib:$(BOOST_1_81_0_DIR)/stage/lib ./dist/sravz_redis_async "ETH-USD,BTC-USD"
+
+run_actor: sravz_actor
+	LD_LIBRARY_PATH=$(REDIS_PLUS_PLUS_MODULES_DIR)/lib:$(BOOST_1_81_0_DIR)/stage/lib ./dist/actor
+
+run_service_db: sravz_service_db
+	LD_LIBRARY_PATH=/usr/local/lib ./dist/mongo_db
+

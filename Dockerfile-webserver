@@ -1,0 +1,24 @@
+FROM public.ecr.aws/sravz/sravz/backend-cpp:v35
+LABEL MAINTAINER contactus@sravz.com
+
+WORKDIR /build
+
+COPY . .
+
+RUN ./build.sh
+
+# Clean up directory 
+RUN sh -x \
+  && find . -type f -name '*.cpp' -exec rm {} + \
+  && find . -type f -name '*.hpp' -exec rm {} + \
+  &&   rm -f ./Dockerfile* 
+
+
+EXPOSE 5000
+
+# RUN apk --no-cache add openssl wget
+HEALTHCHECK  --interval=3m --timeout=3s \
+  CMD wget --no-verbose --tries=1  --spider http://localhost:5000/health || exit 1
+
+# Command to run when starting the container
+CMD ["./build/bin/backend-cpp", "-s",  "webserver"]

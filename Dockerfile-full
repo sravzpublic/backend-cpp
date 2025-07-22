@@ -1,0 +1,108 @@
+FROM debian:stable-slim
+LABEL MAINTAINER=contactus@sravz.com
+
+RUN apt-get -y update
+RUN apt-get -y install git autoconf \
+    make g++ cmake gdb valgrind \
+    openssl libssl-dev libjsoncpp-dev \
+    uuid-dev zlib1g-dev \
+    libhiredis-dev nlohmann-json3-dev \
+    libgtest-dev libcurl4-openssl-dev \
+    libpulse-dev ccache \
+    curl wget clang clang-format bzip2 \
+    clang-tidy cppcheck \
+    unzip ninja-build
+
+# Install Boost
+WORKDIR /usr/src
+RUN cd /usr/src \
+    && wget https://archives.boost.io/release/1.88.0/source/boost_1_88_0.tar.bz2 \
+    && tar --bzip2 -xf boost_1_88_0.tar.bz2 \
+    && cd boost_1_88_0 \
+    && ./bootstrap.sh \
+    && ./b2 install
+
+# Install hiredis
+#RUN git clone https://github.com/redis/hiredis.git
+# Get Latest version
+RUN cd /usr/src \
+    && wget https://github.com/redis/hiredis/archive/refs/tags/v1.2.0.tar.gz \
+    && tar xvf v1.2.0.tar.gz \
+    && cd hiredis-1.2.0/ \
+    && make USE_SSL=1 \
+    && make USE_SSL=1 install
+
+# Install redis++
+RUN cd /usr/src \
+    && git clone https://github.com/sewenew/redis-plus-plus.git \
+    && cd redis-plus-plus \
+    && mkdir build \
+    && cd build \
+    # RUN ln -s /usr/bin/c++ /usr/local/bin/c++
+    # RUN ln -s /usr/bin/gcc /usr/local/bin/gcc
+    && CXX=/usr/bin/c++ cmake -DREDIS_PLUS_PLUS_USE_TLS=ON -DREDIS_PLUS_PLUS_CXX_STANDARD=20 .. \
+    # RUN cmake -DREDIS_PLUS_PLUS_CXX_STANDARD=17 ..
+    &&  make \
+    && make install
+
+# Install fails since this is header only library, add it as a git module and use the code.
+# Install redis++ modules
+# RUN cd /usr/src \
+#     && ldconfig /usr/local/lib \
+#     && git clone https://github.com/wingunder/redis-plus-plus-modules.git \
+#     && cd redis-plus-plus-modules \
+#     && ./bootstrap.sh \
+#     && ./configure \
+#     && make -j8
+
+# Install mongoc driver
+RUN cd /usr/src \
+    && wget https://github.com/mongodb/mongo-c-driver/releases/download/1.23.2/mongo-c-driver-1.23.2.tar.gz \
+    && tar xzf mongo-c-driver-1.23.2.tar.gz \
+    && cd mongo-c-driver-1.23.2 \
+    && mkdir cmake-build \
+    && cd cmake-build \
+    && cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF .. \
+    && make \
+    && make install
+
+# installing mongocxx driver - connects c++ to mongo
+RUN cd /usr/src \
+    && wget https://github.com/mongodb/mongo-cxx-driver/releases/download/r3.7.1/mongo-cxx-driver-r3.7.1.tar.gz \
+    && tar -xzf mongo-cxx-driver-r3.7.1.tar.gz \
+    && cd mongo-cxx-driver-r3.7.1/build \
+    && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local .. -DCMAKE_CXX_STANDARD=17 -DBSONCXX_POLY_USE_SYSTEM_MNMLSTC=0 -DBSONCXX_POLY_USE_MNMLSTC=0 \
+    # && make EP_mnmlstc_core \
+    && make \
+    && make install
+
+# Install aws s3 c++ client
+RUN cd /usr/src \
+    && git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp \
+    && mkdir sdk_build \
+    && cd sdk_build \
+    && cmake ../aws-sdk-cpp -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=/usr/local/ -DCMAKE_INSTALL_PREFIX=/usr/local/ -DBUILD_ONLY="s3" \
+    && make \
+    && make install
+
+# Install cpp-jwt
+RUN cd /usr/src \
+    && git clone https://github.com/arun11299/cpp-jwt.git \
+    && cd cpp-jwt \
+    && mkdir build \
+    && cd build \
+    && cmake .. \
+    && cmake --build . -j 
+
+# Compile and install duckdb - precompiled binaries do not work - throw link errors
+# After build use /usr/src/duckdb/src/include for the include files
+# Command copies ./src/libduckdb.so /usr/local/lib/ add /usr/local/lib/ to LD_LIBRARY_PATH
+RUN cd /usr/src \
+    && git clone https://github.com/duckdb/duckdb.git \
+    && cd duckdb \
+    && CORE_EXTENSIONS='autocomplete;httpfs;icu;json;tpch' GEN=ninja make \
+    && cp ./build/release/src/libduckdb.so /usr/local/lib/ \
+    && cp ./build/release/src/libduckdb_static.a /usr/local/lib/
+
+CMD ["sh", "-c", "tail -f /dev/null"]
+
