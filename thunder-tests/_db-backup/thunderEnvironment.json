@@ -1,0 +1,16 @@
+[
+  {
+    "_id": "712b6fa3-51f5-4489-b1ff-5dd025439633",
+    "name": "TestVars",
+    "default": true,
+    "sortNum": 10000,
+    "created": "2023-04-22T00:04:33.857Z",
+    "modified": "2023-04-22T00:04:33.857Z",
+    "data": [
+      {
+        "name": "Bearer",
+        "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY0NmJkNzQ3NGE1NmVhODcxMzU0ZDZkMiIsImlhdCI6MTY4NDc5MjY4OSwiZXhwIjoxNjg0ODc5MDg5fQ.cjTUMnFCZgnTndp7Zp4KYVNTzVVirZ3wYzAm_J_RcTU"
+      }
+    ]
+  }
+]

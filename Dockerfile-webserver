@@ -1,5 +1,5 @@
 FROM public.ecr.aws/sravz/sravz/backend-cpp:v35
-LABEL MAINTAINER contactus@sravz.com
+LABEL maintainer="contactus@sravz.com"
 
 WORKDIR /build
 

@@ -1,0 +1,14 @@
+{
+    "_id": "f5c1baed-4226-4050-beb6-4e16c0534186",
+    "name": "TestVars-Staging",
+    "default": false,
+    "sortNum": 20000,
+    "created": "2023-07-19T04:37:33.179Z",
+    "modified": "2023-07-19T04:37:33.179Z",
+    "data": [
+        {
+            "name": "Bearer",
+            "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjVmMjQ3OTA1ZGNlMDdmNzVjMzg3NzU3ZiIsInJvbGUiOiJ1c2VyIiwic3VpZCI6Ijg3YjVmZmFlOGVlZDI4MmNlNmRmYzUxZjBjYjg1NjNjIiwiaWF0IjoxNjg5NzQxNDE4LCJleHAiOjE2ODk4Mjc4MTh9.C2R_7AxEVy3cLD4Bm_CeUUx8jSftEtTT4kr8M9UpbAc"
+        }
+    ]
+}
