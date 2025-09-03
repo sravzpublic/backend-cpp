@@ -1,41 +1,61 @@
-### To upgrade Boost
+# Sravz Backend CPP Codebase
+
+## Overview
+
+This repository contains the C++ backend for Sravz, designed for high-performance real-time data processing and WebSocket communication. The codebase leverages Boost libraries and modern C++ standards (C++20) for concurrency, networking, and logging.
+
+## Features
+
+- **WebSocket Server**: Multi-threaded WebSocket server for real-time chat and data streaming.
+- **Redis Integration**: Subscriber and publisher modules for consuming and publishing messages to Redis topics.
+- **Symbol Management**: Tracks and manages financial symbols and their sessions.
+- **Configurable**: Uses configuration files for environment-specific settings (hostnames, ports, topics, etc.).
+- **Modular Design**: Organized into components such as web server, publisher, subscriber, shared state, and utility functions.
+- **Testing**: Integrated with CTest for unit and integration tests.
+
+## Directory Structure
+
+- `src/web/` - WebSocket server, session management, publisher, subscriber, shared state, and symbol logic.
+- `src/redis_subscriber.cpp` - Redis subscriber implementation.
+- `src/util.cpp` - Utility functions for environment variables and Redis connection options.
+- `app.production.cfg` - Example configuration file for production.
+- `CMakeLists.txt` - Build configuration using CMake.
+
+## Getting Started
+
+### Prerequisites
+
+- C++20 compatible compiler
+- CMake >= 3.24
+- Boost libraries
+- Redis server
+
+### Build Instructions
+
 ```bash
-curl -O https://sourceforge.net/projects/boost/files/boost/1.81.0/boost_1_81_0.tar.bz2/download
-cd boost_1_81_0
-./bootstrap.sh
-./bjam install
+mkdir build
+cd build
+cmake ..
+make
 ```
-### To install mongodb client
+
+### Configuration
+
+Edit `app.production.cfg` to set hostnames, ports, topics, and other environment variables.
+
+### Running
+
+The main entry point is in `src/web/main.cpp`. You can run the server with:
+
 ```bash
-RUN cd ~ \
-    && wget https://github.com/mongodb/mongo-c-driver/releases/download/1.23.2/mongo-c-driver-1.23.2.tar.gz \
-    && tar xzf mongo-c-driver-1.23.2.tar.gz \
-    && cd mongo-c-driver-1.23.2 \
-    && mkdir build \
-    && cd build \
-    && cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF .. \
-    && cmake --build . --target install \
-    && cd ~ \
-    && rm mongo-c-driver-1.23.2.tar.gz \
-    && rm -rf mongo-c-driver-1.23.2
-
-# installing mongocxx driver - connects c++ to mongo
-RUN cd ~ \
-    && wget https://github.com/mongodb/mongo-cxx-driver/releases/download/r3.7.1/mongo-cxx-driver-r3.7.1.tar.gz \
-    && tar -xzf mongo-cxx-driver-r3.7.1.tar.gz \
-    && cd mongo-cxx-driver-r3.7.1/build \
-    && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local .. \
-    && make EP_mnmlstc_core \
-    && make \
-    && make install \
-    && cd ~ \
-    && rm mongo-cxx-driver-r3.7.1.tar.gz \
-    && rm -rf mongo-cxx-driver-r3.7.1
-
-# Remove libhiredis
-root@db0bf31be228:/usr/local/lib# mv /usr/lib/x86_64-linux-gnu/libhiredis.a /tmp
-root@db0bf31be228:/usr/local/lib# mv /usr/lib/x86_64-linux-gnu/libhiredis.so /tmp
-root@db0bf31be228:/usr/local/lib# mv /usr/lib/x86_64-linux-gnu/libhiredis.so.0.14 /tmp
+./bin/sravz_backend_cpp <address> <port> <doc_root> <threads> <topics>
 ```
 
+Example:
 
+```bash
+./bin/sravz_backend_cpp 0.0.0.0 5000 . 5 ETH-USD,BTC-USD
+```
+
+## License
+Sravz LLC
